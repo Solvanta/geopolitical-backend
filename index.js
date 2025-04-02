@@ -10,6 +10,21 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+// 🌐 Health check for Render
+app.get("/", (req, res) => {
+  res.send("🌍 Geopolitical Chess Backend is running");
+});
+
+// 🔐 Check required environment variables
+if (!process.env.OPENAI_API_KEY) {
+  console.error("❌ OPENAI_API_KEY is missing. Please add it to your .env file.");
+  process.exit(1);
+}
+if (!process.env.GNEWS_API_KEY) {
+  console.error("❌ GNEWS_API_KEY is missing. Please add it to your .env file.");
+  process.exit(1);
+}
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -17,6 +32,10 @@ const openai = new OpenAI({
 // ✅ AI Strategy Route
 app.post("/api/strategy", async (req, res) => {
   const { country } = req.body;
+
+  if (!country) {
+    return res.status(400).json({ error: "Missing country in request body." });
+  }
 
   try {
     const prompt = `Give a geopolitical strategy summary for ${country} as if it were a piece in a global chess game. Include its role, goals, recent moves, and predicted strategy.`;
@@ -39,24 +58,23 @@ app.post("/api/strategy", async (req, res) => {
 // ✅ News Route via GNews
 app.post("/api/news", async (req, res) => {
   const { country } = req.body;
-  const apiKey = process.env.GNEWS_API_KEY;
 
-  if (!apiKey) {
-    return res.status(500).json({ error: "Missing GNEWS_API_KEY in backend." });
+  if (!country) {
+    return res.status(400).json({ error: "Missing country in request body." });
   }
 
   try {
     const query = encodeURIComponent(country);
-    const url = `https://gnews.io/api/v4/search?q=${query}&lang=en&max=3&apikey=${apiKey}`;
+    const url = `https://gnews.io/api/v4/search?q=${query}&lang=en&max=3&apikey=${process.env.GNEWS_API_KEY}`;
     const response = await fetch(url);
     const data = await response.json();
 
-    if (data.errors) {
-      console.error("GNews API Error:", data.errors);
-      return res.status(500).json({ error: data.errors[0] });
+    if (data.error || !data.articles) {
+      console.error("GNews API Error:", data);
+      return res.status(500).json({ error: data.error || "Unknown GNews error" });
     }
 
-    res.json({ articles: data.articles || [] });
+    res.json({ articles: data.articles });
   } catch (error) {
     console.error("GNews Fetch Error:", error.message);
     res.status(500).json({ error: "Failed to fetch news." });
