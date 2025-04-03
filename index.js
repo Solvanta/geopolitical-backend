@@ -1,6 +1,6 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-require("dotenv").config();
 const { OpenAI } = require("openai");
 const fetch = require("node-fetch");
 
@@ -17,11 +17,11 @@ app.get("/", (req, res) => {
 
 // 🔐 Check required environment variables
 if (!process.env.OPENAI_API_KEY) {
-  console.error("❌ OPENAI_API_KEY is missing. Please add it to your .env file.");
+  console.error("❌ OPENAI_API_KEY is missing.");
   process.exit(1);
 }
 if (!process.env.GNEWS_API_KEY) {
-  console.error("❌ GNEWS_API_KEY is missing. Please add it to your .env file.");
+  console.error("❌ GNEWS_API_KEY is missing.");
   process.exit(1);
 }
 
@@ -50,7 +50,7 @@ app.post("/api/strategy", async (req, res) => {
     const aiResponse = chatCompletion.choices[0].message.content;
     res.json({ summary: aiResponse });
   } catch (error) {
-    console.error("OpenAI Error:", error.message);
+    console.error("❌ OpenAI Error:", error.message);
     res.status(500).json({ error: "AI request failed." });
   }
 });
@@ -66,21 +66,25 @@ app.post("/api/news", async (req, res) => {
   try {
     const query = encodeURIComponent(country);
     const url = `https://gnews.io/api/v4/search?q=${query}&lang=en&max=3&apikey=${process.env.GNEWS_API_KEY}`;
+
+    // 🪵 Debug Log
+    console.log("🔑 Using GNEWS_API_KEY:", process.env.GNEWS_API_KEY);
+
     const response = await fetch(url);
     const data = await response.json();
 
     if (data.error || !data.articles) {
-      console.error("GNews API Error:", data);
+      console.error("❌ GNews API Error:", data);
       return res.status(500).json({ error: data.error || "Unknown GNews error" });
     }
 
     res.json({ articles: data.articles });
   } catch (error) {
-    console.error("GNews Fetch Error:", error.message);
+    console.error("❌ GNews Fetch Error:", error.message);
     res.status(500).json({ error: "Failed to fetch news." });
   }
 });
 
 app.listen(port, () => {
-  console.log(`✅ Server running on http://localhost:${port}`);
+  console.log(`✅ Server is running on http://localhost:${port}`);
 });
