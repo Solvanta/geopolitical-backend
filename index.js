@@ -2,13 +2,14 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { OpenAI } = require("openai");
-const fetch = require("node-fetch");
 
 const app = express();
 const port = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
+
+// ✅ Node v18+ has fetch globally, no need for node-fetch
 
 // 🌐 Health check for Render
 app.get("/", (req, res) => {
@@ -59,6 +60,9 @@ app.post("/api/strategy", async (req, res) => {
 app.post("/api/news", async (req, res) => {
   const { country } = req.body;
 
+  console.log("🔍 Requested news for:", country);
+  console.log("🔑 Using GNEWS_API_KEY:", process.env.GNEWS_API_KEY); // Add this line
+
   if (!country) {
     return res.status(400).json({ error: "Missing country in request body." });
   }
@@ -66,10 +70,6 @@ app.post("/api/news", async (req, res) => {
   try {
     const query = encodeURIComponent(country);
     const url = `https://gnews.io/api/v4/search?q=${query}&lang=en&max=3&apikey=${process.env.GNEWS_API_KEY}`;
-
-    // 🪵 Debug Log
-    console.log("🔑 Using GNEWS_API_KEY:", process.env.GNEWS_API_KEY);
-
     const response = await fetch(url);
     const data = await response.json();
 
@@ -84,6 +84,7 @@ app.post("/api/news", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch news." });
   }
 });
+
 
 app.listen(port, () => {
   console.log(`✅ Server is running on http://localhost:${port}`);
